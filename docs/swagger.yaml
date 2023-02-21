@@ -1,0 +1,71 @@
+definitions:
+  main.album:
+    properties:
+      artist:
+        type: string
+      id:
+        type: string
+      price:
+        type: number
+      title:
+        type: string
+    type: object
+info:
+  contact: {}
+  title: Albums API
+  version: "1.0"
+paths:
+  /albums:
+    get:
+      description: Responds with the list of all albums as JSON.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.album'
+            type: array
+      summary: Get albums
+      tags:
+      - albums
+    post:
+      description: Takes an album JSON and store in DB. Return saved JSON.
+      parameters:
+      - description: Album JSON
+        in: body
+        name: album
+        required: true
+        schema:
+          $ref: '#/definitions/main.album'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.album'
+      summary: Add a new album
+      tags:
+      - albums
+  /albums/{id}:
+    get:
+      description: Returns the album whose ID value matches the id sent by the client.
+      parameters:
+      - description: search album by id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.album'
+      summary: Get single album by id
+      tags:
+      - albums
+swagger: "2.0"
