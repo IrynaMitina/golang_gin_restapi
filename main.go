@@ -2,33 +2,24 @@ package main
 
 import (
     "net/http"
+    "strings"
+    "strconv"
     "github.com/gin-gonic/gin"
 	_"github.com/IrynaMitina/golang_gin_restapi/docs"  // load local docs/docs.go
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// album model
-type album struct {
-    ID     string  `json:"id"`
-    Title  string  `json:"title"`
-    Artist string  `json:"artist"`
-    Price  float64 `json:"price"`
-}
-var albums = []album{
-    {ID: "1", Title: "Blue Train", Artist: "John Coltrane", Price: 56.99},
-    {ID: "2", Title: "Jeru", Artist: "Gerry Mulligan", Price: 17.99},
-    {ID: "3", Title: "Sarah Vaughan and Clifford Brown", Artist: "Sarah Vaughan", Price: 39.99},
-}
-
 // @title     Albums API
 // @version         1.0
 func main() {
+    ConnectDB()
+
     router := gin.Default()
     router.GET("/albums", getAlbums)
     router.GET("/albums/:id", getAlbumByID)
     router.POST("/albums", postAlbums)
-	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+    router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
     router.Run("localhost:8080")
 }
@@ -41,7 +32,12 @@ func main() {
 // @Success      200  {array}  album
 // @Router       /albums [get]
 func getAlbums(c *gin.Context) {
-    c.IndentedJSON(http.StatusOK, albums)
+    allAlbums, err := allAlbums()
+    if err != nil {
+        c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err})
+        return
+    }
+    c.IndentedJSON(http.StatusOK, allAlbums)
 }
 
 // postAlbums    godoc
@@ -57,7 +53,12 @@ func postAlbums(c *gin.Context) {
     if err := c.BindJSON(&newAlbum); err != nil {
         return
     }
-    albums = append(albums, newAlbum)
+    id, err := addAlbum(newAlbum)
+    if err != nil {
+        c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err})
+        return
+    }
+    newAlbum.ID = id
     c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
@@ -70,12 +71,15 @@ func postAlbums(c *gin.Context) {
 // @Success      200  {object}  album
 // @Router       /albums/{id} [get]
 func getAlbumByID(c *gin.Context) {
-    id := c.Param("id")
-    for _, a := range albums {
-        if a.ID == id {
-            c.IndentedJSON(http.StatusOK, a)
-            return
+    id, _ := strconv.Atoi(c.Param("id"))
+    alb, err := albumById(id)
+    if err != nil {
+        if strings.Contains(err.Error(), "no such album") {
+            c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+        } else {
+            c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err})
         }
+        return
     }
-    c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+    c.IndentedJSON(http.StatusOK, alb)    
 }
